@@ -1,23 +1,25 @@
 import { Router } from 'express';
 
-// import TransactionsRepository from '../repositories/TransactionsRepository';
+import { getCustomRepository } from 'typeorm';
+import TransactionsRepository from '../repositories/TransactionsRepository';
 // import DeleteTransactionService from '../services/DeleteTransactionService';
 // import ImportTransactionsService from '../services/ImportTransactionsService';
-import { getRepository } from 'typeorm';
 import CreateTransactionService from '../services/CreateTransactionService';
-import Transaction from '../models/Transaction';
+// import Transaction from '../models/Transaction';
 
 const transactionsRouter = Router();
 
 transactionsRouter.get('/', async (request, response) => {
-  const transactionsRepository = getRepository(Transaction);
-  const repository = await transactionsRepository.find();
+  const transactionsRepository = getCustomRepository(TransactionsRepository);
 
-  return response.json({ transactions: repository });
+  const transactions = await transactionsRepository.getTransactions();
+  const balance = await transactionsRepository.getBalance();
+
+  return response.json({ transactions, balance });
 });
 
 transactionsRouter.post('/', async (request, response) => {
-  const { title, value, type, category_id } = request.body;
+  const { title, value, type, category } = request.body;
 
   const createTransaction = new CreateTransactionService();
 
@@ -25,13 +27,19 @@ transactionsRouter.post('/', async (request, response) => {
     title,
     value,
     type,
-    category_id,
+    category,
   });
 
-  delete transaction.created_at;
-  delete transaction.updated_at;
+  delete transaction.category.created_at;
+  delete transaction.category.updated_at;
 
-  return response.json(transaction);
+  return response.json({
+    id: transaction.id,
+    title,
+    value,
+    type,
+    category,
+  });
 });
 
 transactionsRouter.delete('/:id', async (request, response) => {
