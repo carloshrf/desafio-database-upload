@@ -38,12 +38,14 @@ class TransactionsRepository extends Repository<Transaction> {
   }
 
   public async getTransactions(): Promise<Transaction[]> {
+    //
     // const transactions = await this.find({
     //   select: ['id', 'title', 'value', 'type', 'category'],
     //   relations: ['category'],
-    // });
+    // }); // created_at e updated_at retornam
     //
     // // ==============================
+
     // const transactions = await this.find({
     //   join: {
     //     alias: 'transaction',
@@ -52,9 +54,10 @@ class TransactionsRepository extends Repository<Transaction> {
     //     },
     //   },
     //   select: ['id', 'title', 'value', 'type'],
-    // });
-    // =================================
+    // }); // created_at e updated_at retornam
     //
+    // =================================
+
     const transactions = await this.createQueryBuilder('transactions')
       .leftJoinAndSelect('transactions.category', 'category') // adiciona a tabela categoria de acordo com seu relacionamento, se tornando acessível na tabela transactions
       .select([
@@ -65,7 +68,7 @@ class TransactionsRepository extends Repository<Transaction> {
         'category.id',
         'category.title',
       ])
-      .getMany(); // recebe não só um, mas todos resultados referentes da busca
+      .getMany(); // retorna não só um, mas todos resultados referentes da busca
 
     return transactions;
   }
