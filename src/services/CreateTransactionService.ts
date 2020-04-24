@@ -24,7 +24,7 @@ class CreateTransactionService {
     const { total } = await transactionsRepository.getBalance();
 
     if (type === 'outcome' && total - value < 0) {
-      throw new AppError('Not enough cash stranger');
+      throw new AppError('Not enough cash stranger', 401);
     }
 
     const categoryRepository = getRepository(Category);

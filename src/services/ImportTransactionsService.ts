@@ -1,8 +1,102 @@
+import csvParse from 'csv-parse';
+import fs from 'fs';
+import path from 'path';
+import { getRepository, In } from 'typeorm';
+
 import Transaction from '../models/Transaction';
+import Category from '../models/Category';
+
+interface CSVData {
+  title: string;
+  type: 'income' | 'outcome';
+  value: number;
+  category: string;
+}
 
 class ImportTransactionsService {
-  async execute(): Promise<Transaction[]> {
-    // TODO
+  public async execute(fileName: string): Promise<Transaction[]> {
+    const csvFilePath = path.resolve(
+      __dirname,
+      '..',
+      '..',
+      'tmp',
+      `${fileName}`,
+    );
+
+    const readCSVStream = fs.createReadStream(csvFilePath);
+
+    const parseStream = csvParse({
+      from_line: 2,
+      ltrim: true,
+      rtrim: true,
+    });
+
+    const parseCSV = readCSVStream.pipe(parseStream);
+
+    const transaction: CSVData[] = [];
+    const categories: string[] = [];
+
+    parseCSV.on('data', line => {
+      categories.push(line[3]);
+
+      transaction.push({
+        title: String(line[0]),
+        type: line[1],
+        value: Number(line[2]),
+        category: String(line[3]),
+      });
+    });
+
+    await new Promise(resolve => {
+      parseCSV.on('end', resolve);
+    });
+
+    const transactionsRepository = getRepository(Transaction);
+    const categoryRepository = getRepository(Category);
+
+    // busca todas categorias contidas no array categories
+    const existscategories = await categoryRepository.find({
+      where: {
+        title: In(categories),
+      },
+    });
+
+    // cria uma string com todas categorias existentes no banco de dados no type Category
+    const existentCategoriesTitles = existscategories.map(
+      category => category.title,
+    );
+
+    // busca as categorias que não existem
+    const addCategoryTitles = categories.filter(
+      category => !existentCategoriesTitles.includes(category),
+    );
+
+    // adiciona as categorias a serem adicionadas
+    const newCategories = categoryRepository.create(
+      addCategoryTitles.map(title => ({
+        title,
+      })),
+    );
+
+    await categoryRepository.save(newCategories);
+
+    // recria a array de categorias já no tipo Category
+    const allCategories = [...newCategories, ...existscategories];
+
+    const createdTransactions = transactionsRepository.create(
+      transaction.map(transact => ({
+        title: transact.title,
+        type: transact.type,
+        value: transact.value,
+        category: allCategories.find(
+          category => category.title === transact.category,
+        ),
+      })),
+    );
+
+    await transactionsRepository.save(createdTransactions);
+
+    return createdTransactions;
   }
 }
 
