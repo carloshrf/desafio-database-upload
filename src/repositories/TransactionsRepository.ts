@@ -38,12 +38,19 @@ class TransactionsRepository extends Repository<Transaction> {
   }
 
   public async getTransactions(): Promise<Transaction[]> {
-    //
-    // const transactions = await this.find({
-    //   select: ['id', 'title', 'value', 'type', 'category'],
-    //   relations: ['category'],
-    // }); // created_at e updated_at retornam
-    //
+    const transactions = await this.find({
+      select: [
+        'id',
+        'title',
+        'value',
+        'type',
+        'category',
+        'created_at',
+        'updated_at',
+      ],
+      relations: ['category'],
+    }); // created_at e updated_at de category retornam
+
     // // ==============================
 
     // const transactions = await this.find({
@@ -55,20 +62,22 @@ class TransactionsRepository extends Repository<Transaction> {
     //   },
     //   select: ['id', 'title', 'value', 'type'],
     // }); // created_at e updated_at retornam
-    //
+
     // =================================
 
-    const transactions = await this.createQueryBuilder('transactions')
-      .leftJoinAndSelect('transactions.category', 'category') // adiciona a tabela categoria de acordo com seu relacionamento, se tornando acessível na tabela transactions
-      .select([
-        'transactions.id',
-        'transactions.title',
-        'transactions.value',
-        'transactions.type',
-        'category.id',
-        'category.title',
-      ])
-      .getMany(); // retorna não só um, mas todos resultados referentes da busca
+    // const transactions = await this.createQueryBuilder('transactions')
+    //   .leftJoinAndSelect('transactions.category', 'categories') // adiciona a tabela categoria de acordo com seu relacionamento, se tornando acessível na tabela transactions
+    //   .select([
+    //     'transactions.id',
+    //     'transactions.title',
+    //     'transactions.value',
+    //     'transactions.type',
+    //     'transactions.created_at',
+    //     'transactions.updated_at',
+    //     'categories.id',
+    //     'categories.title',
+    //   ])
+    //   .getMany(); // retorna não só um, mas todos resultados referentes da busca
 
     return transactions;
   }

@@ -1,7 +1,9 @@
 import csvParse from 'csv-parse';
 import fs from 'fs';
 import path from 'path';
-import { getRepository, In } from 'typeorm';
+import { getRepository, getCustomRepository, In } from 'typeorm';
+import TransactionsRepository from '../repositories/TransactionsRepository';
+import AppError from '../errors/AppError';
 
 import Transaction from '../models/Transaction';
 import Category from '../models/Category';
@@ -51,8 +53,25 @@ class ImportTransactionsService {
       parseCSV.on('end', resolve);
     });
 
-    const transactionsRepository = getRepository(Transaction);
+    const transactionsRepository = getCustomRepository(TransactionsRepository);
     const categoryRepository = getRepository(Category);
+
+    // valida o valor
+    let { total } = await transactionsRepository.getBalance();
+
+    transaction.forEach(({ type, value }) => {
+      if (type === 'income') {
+        total += value;
+      }
+
+      if (type === 'outcome') {
+        total -= value;
+      }
+
+      if (total < 0) {
+        throw new AppError('Not enough cash stranger', 400);
+      }
+    });
 
     // busca todas categorias contidas no array categories
     const existscategories = await categoryRepository.find({
@@ -67,9 +86,10 @@ class ImportTransactionsService {
     );
 
     // busca as categorias que não existem
-    const addCategoryTitles = categories.filter(
-      category => !existentCategoriesTitles.includes(category),
-    );
+    const addCategoryTitles = categories
+      .filter(category => !existentCategoriesTitles.includes(category))
+      .filter((value, index, self) => self.indexOf(value) === index);
+    // no segundo filter, é retornado o valor do vetor onde se confere o index do primeiro elemento único
 
     // adiciona as categorias a serem adicionadas
     const newCategories = categoryRepository.create(
